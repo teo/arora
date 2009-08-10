@@ -163,6 +163,7 @@ private slots:
     void openActionUrl(QAction *action);
     void showWindow();
     void swapFocus();
+    void onFocusChange(QWidget *, QWidget *);
 
     void printRequested(QWebFrame *frame);
     void geometryChangeRequested(const QRect &geometry);
@@ -172,6 +173,7 @@ private:
     void loadDefaultState();
     void setupMenu();
     void setupToolBar();
+    void showAndFocus(QWidget *);
 
 private:
     QMenu *m_fileMenu;
@@ -255,6 +257,9 @@ private:
     TabWidget *m_tabWidget;
 
     AutoSaver *m_autoSaver;
+
+    // for showAndFocus()
+    QWidget *m_shownWidget;
 
     // These store if the user requested the menu/status bars visible. They are
     // used to determine if these bars should be reshown when leaving fullscreen.
