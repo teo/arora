@@ -174,6 +174,7 @@ private:
     void setupMenu();
     void setupToolBar();
     void showAndFocus(QWidget *);
+    void updateStopReloadActionText(bool loading);
 
 private:
     QMenu *m_fileMenu;
