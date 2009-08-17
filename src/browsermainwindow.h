@@ -100,9 +100,12 @@ public:
     TabWidget *tabWidget() const;
     WebView *currentTab() const;
     ToolbarSearch *toolbarSearch() const;
-    QByteArray saveState(bool withTabs = true) const;
-    bool restoreState(const QByteArray &state);
     QAction *showMenuBarAction() const;
+
+    void saveToolBarState(QDataStream &) const;
+    QByteArray saveState(bool withTabs = true) const;
+    void restoreToolBarState(QDataStream &);
+    bool restoreState(const QByteArray &state);
 
 public slots:
     void goHome();
