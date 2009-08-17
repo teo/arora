@@ -112,9 +112,6 @@ BrowserMainWindow::BrowserMainWindow(QWidget *parent, Qt::WindowFlags flags)
     , m_navigationBar(0)
     , m_navigationSplitter(0)
     , m_toolbarSearch(0)
-#if defined(Q_WS_MAC)
-    , m_bookmarksToolbarFrame(0)
-#endif
     , m_bookmarksToolbar(0)
     , m_tabWidget(new TabWidget(this))
     , m_autoSaver(new AutoSaver(this))
@@ -125,56 +122,11 @@ BrowserMainWindow::BrowserMainWindow(QWidget *parent, Qt::WindowFlags flags)
     // yes, that's a Firefox bug!
     statusBar()->setLayoutDirection(Qt::LeftToRight);
     setupMenu();
-    setupToolBar();
+    setupToolBars();
 
     m_filePrivateBrowsingAction->setChecked(BrowserApplication::isPrivate());
 
-    QWidget *centralWidget = new QWidget(this);
-    BookmarksModel *boomarksModel = BrowserApplication::bookmarksManager()->bookmarksModel();
-    m_bookmarksToolbar = new BookmarksToolBar(boomarksModel, this);
-    connect(m_bookmarksToolbar, SIGNAL(openUrl(const QUrl&, const QString&)),
-            m_tabWidget, SLOT(loadUrlFromUser(const QUrl&, const QString&)));
-    connect(m_bookmarksToolbar, SIGNAL(openUrl(const QUrl&, TabWidget::OpenUrlIn, const QString&)),
-            m_tabWidget, SLOT(loadUrl(const QUrl&, TabWidget::OpenUrlIn, const QString&)));
-
-    QVBoxLayout *layout = new QVBoxLayout;
-    layout->setSpacing(0);
-    layout->setMargin(0);
-#if defined(Q_WS_MAC)
-    m_bookmarksToolbarFrame = new QFrame(this);
-    m_bookmarksToolbarFrame->setLineWidth(1);
-    m_bookmarksToolbarFrame->setMidLineWidth(0);
-    m_bookmarksToolbarFrame->setFrameShape(QFrame::HLine);
-    m_bookmarksToolbarFrame->setFrameShadow(QFrame::Raised);
-    QPalette fp = m_bookmarksToolbarFrame->palette();
-    fp.setColor(QPalette::Active, QPalette::Light, QColor(64, 64, 64));
-    fp.setColor(QPalette::Active, QPalette::Dark, QColor(192, 192, 192));
-    fp.setColor(QPalette::Inactive, QPalette::Light, QColor(135, 135, 135));
-    fp.setColor(QPalette::Inactive, QPalette::Dark, QColor(226, 226, 226));
-    m_bookmarksToolbarFrame->setAttribute(Qt::WA_MacNoClickThrough, true);
-    m_bookmarksToolbarFrame->setPalette(fp);
-    layout->addWidget(m_bookmarksToolbarFrame);
-
-    layout->addWidget(m_bookmarksToolbar);
-    QPalette p = m_bookmarksToolbar->palette();
-    p.setColor(QPalette::Active, QPalette::Window, QColor(150, 150, 150));
-    p.setColor(QPalette::Inactive, QPalette::Window, QColor(207, 207, 207));
-    m_bookmarksToolbar->setAttribute(Qt::WA_MacNoClickThrough, true);
-    m_bookmarksToolbar->setAutoFillBackground(true);
-    m_bookmarksToolbar->setPalette(p);
-    m_bookmarksToolbar->setBackgroundRole(QPalette::Window);
-    m_bookmarksToolbar->setMaximumHeight(19);
-
-    QWidget *w = new QWidget(this);
-    w->setMaximumHeight(0);
-    layout->addWidget(w); // <- OS X tab widget style bug
-#else
-    addToolBarBreak();
-    addToolBar(m_bookmarksToolbar);
-#endif
-    layout->addWidget(m_tabWidget);
-    centralWidget->setLayout(layout);
-    setCentralWidget(centralWidget);
+    setCentralWidget(m_tabWidget);
 
     connect(m_tabWidget, SIGNAL(setCurrentTitle(const QString &)),
             this, SLOT(updateWindowTitle(const QString &)));
@@ -365,9 +317,6 @@ bool BrowserMainWindow::restoreState(const QByteArray &state)
     m_navigationBar->setVisible(showToolbar);
 
     m_bookmarksToolbar->setVisible(showBookmarksBar);
-#if defined(Q_WS_MAC)
-    m_bookmarksToolbarFrame->setVisible(showBookmarksBar);
-#endif
 
     if (maximized)
         setWindowState(windowState() | Qt::WindowMaximized);
@@ -910,9 +859,11 @@ void BrowserMainWindow::retranslate()
     updateStopReloadActionText(false);
 }
 
-void BrowserMainWindow::setupToolBar()
+void BrowserMainWindow::setupToolBars()
 {
-    setUnifiedTitleAndToolBarOnMac(true);
+    // As of Qt 4.6, unified toolbars have too many limitations to use easily
+    //setUnifiedTitleAndToolBarOnMac(true);
+
     m_navigationBar = new QToolBar(this);
     addToolBar(m_navigationBar);
 
@@ -954,6 +905,16 @@ void BrowserMainWindow::setupToolBar()
     QList<int> sizes;
     sizes << (int)((double)splitterWidth * .80) << (int)((double)splitterWidth * .20);
     m_navigationSplitter->setSizes(sizes);
+
+    BookmarksModel *bookmarksModel = BrowserApplication::bookmarksManager()->bookmarksModel();
+    m_bookmarksToolbar = new BookmarksToolBar(bookmarksModel, this);
+    connect(m_bookmarksToolbar, SIGNAL(openUrl(const QUrl&, const QString&)),
+            m_tabWidget, SLOT(loadUrlFromUser(const QUrl&, const QString&)));
+    connect(m_bookmarksToolbar, SIGNAL(openUrl(const QUrl&, TabWidget::OpenUrlIn, const QString&)),
+            m_tabWidget, SLOT(loadUrl(const QUrl&, TabWidget::OpenUrlIn, const QString&)));
+
+    addToolBarBreak();
+    addToolBar(m_bookmarksToolbar);
 }
 
 void BrowserMainWindow::showBookmarksDialog()
@@ -1013,14 +974,8 @@ void BrowserMainWindow::viewBookmarksBar()
 {
     if (m_bookmarksToolbar->isVisible()) {
         m_bookmarksToolbar->hide();
-#if defined(Q_WS_MAC)
-        m_bookmarksToolbarFrame->hide();
-#endif
     } else {
         m_bookmarksToolbar->show();
-#if defined(Q_WS_MAC)
-        m_bookmarksToolbarFrame->show();
-#endif
     }
     m_autoSaver->changeOccurred();
 }

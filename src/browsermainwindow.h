@@ -172,7 +172,7 @@ private:
     void retranslate();
     void loadDefaultState();
     void setupMenu();
-    void setupToolBar();
+    void setupToolBars();
     void showAndFocus(QWidget *);
     void updateStopReloadActionText(bool loading);
 
@@ -250,9 +250,6 @@ private:
     QIcon m_stopIcon;
     QSplitter *m_navigationSplitter;
     ToolbarSearch *m_toolbarSearch;
-#if defined(Q_WS_MAC)
-    QFrame *m_bookmarksToolbarFrame;
-#endif
     BookmarksToolBar *m_bookmarksToolbar;
 
     TabWidget *m_tabWidget;
