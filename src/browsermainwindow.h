@@ -78,6 +78,7 @@ class QSplitter;
 class QFrame;
 class HistoryMenu;
 class BookmarksMenuBarMenu;
+template<class T> class QPointer;
 
 
 /*!
@@ -176,6 +177,9 @@ private slots:
     void printRequested(QWebFrame *frame);
     void geometryChangeRequested(const QRect &geometry);
 
+    void editToolBars();
+    void toolBarDialogClosed(int result);
+
 private:
     void retranslate();
     void loadDefaultState();
@@ -213,6 +217,7 @@ private:
 
     QMenu *m_viewMenu;
     QAction *m_toolBarMenuAction;
+    QAction *m_viewEditToolBarsAction;
     QAction *m_viewShowMenuBarAction;
     QAction *m_viewToolBarsAction;
     QAction *m_viewStatusbarAction;
@@ -261,6 +266,8 @@ private:
     ToolbarSearch *m_toolbarSearch;
     BookmarksToolBar *m_bookmarksToolbar;
     bool m_toolBarsVisible;
+    bool m_editingToolBars;
+    QList<QPointer<QToolBar> > m_toolBarsToHide;
 
     TabWidget *m_tabWidget;
 

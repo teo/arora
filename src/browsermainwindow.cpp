@@ -96,6 +96,7 @@
 #include <qtextcodec.h>
 #include <qmenubar.h>
 #include <qmessagebox.h>
+#include <qpointer.h>
 #include <qstatusbar.h>
 #include <qtoolbar.h>
 #include <qinputdialog.h>
@@ -531,6 +532,9 @@ void BrowserMainWindow::setupMenu()
     connect(m_viewToolBarsAction, SIGNAL(triggered()), this, SLOT(viewToolBars()));
     addAction(m_viewToolBarsAction);
 
+    m_viewEditToolBarsAction = new QAction(this);
+    connect(m_viewEditToolBarsAction, SIGNAL(triggered()), this, SLOT(editToolBars()));
+
     QAction *viewTabBarAction = m_tabWidget->tabBar()->viewTabBarAction();
     m_viewMenu->addAction(viewTabBarAction);
     connect(viewTabBarAction, SIGNAL(toggled(bool)),
@@ -822,6 +826,7 @@ void BrowserMainWindow::retranslate()
     m_viewMenu->setTitle(tr("&View"));
     m_viewToolBarsAction->setShortcut(tr("Ctrl+|"));
     m_toolBarMenuAction->setText(tr("Toolbars"));
+    m_viewEditToolBarsAction->setText(tr("Customize Toolbars..."));
     m_viewStatusbarAction->setShortcut(tr("Ctrl+/"));
     m_viewShowMenuBarAction->setText(tr("Show Menu Bar"));
     m_viewReloadAction->setText(tr("&Reload Page"));
@@ -871,6 +876,7 @@ void BrowserMainWindow::retranslate()
 
 void BrowserMainWindow::addToolBar(QToolBar *toolBar)
 {
+    toolBar->setMovable(m_editingToolBars);
     connect(toolBar->toggleViewAction(), SIGNAL(triggered(bool)),
             this, SLOT(toolBarViewActionTriggered(bool)));
     QMainWindow::addToolBar(toolBar);
@@ -879,6 +885,7 @@ void BrowserMainWindow::addToolBar(QToolBar *toolBar)
 void BrowserMainWindow::setupToolBars()
 {
     m_toolBarsVisible = false;
+    m_editingToolBars = false;
 
     // As of Qt 4.6, unified toolbars have too many limitations to use easily
     //setUnifiedTitleAndToolBarOnMac(true);
@@ -1473,6 +1480,11 @@ QMenu *BrowserMainWindow::createPopupMenu()
     first = menu->insertSeparator(first);
     menu->insertAction(first, m_viewToolBarsAction);
 
+    if (!m_editingToolBars) {
+        menu->addSeparator();
+        menu->addAction(m_viewEditToolBarsAction);
+    }
+
     return menu;
 }
 
@@ -1540,4 +1552,53 @@ bool BrowserMainWindow::event(QEvent *event)
         return true;
     }
     return QMainWindow::event(event);
+}
+
+void BrowserMainWindow::editToolBars()
+{
+    if (m_editingToolBars)
+        return;
+
+    m_editingToolBars = true;
+
+    foreach (QToolBar *toolBar, findChildren<QToolBar*>()) {
+        if (!toolBar->isVisible()) {
+            toolBar->show();
+            m_toolBarsToHide << toolBar;
+        }
+
+        toolBar->setMovable(true);
+    }
+
+    m_bookmarksToolbar->setContextMenuPolicy(Qt::NoContextMenu);
+
+    QMessageBox *dialog = new QMessageBox(this);
+    dialog->setModal(false);
+    dialog->setText(tr("Use the grips on the edges of toolbars to move them. Right click toolbars for more options."));
+
+    connect(dialog, SIGNAL(finished(int)),
+            this, SLOT(toolBarDialogClosed(int)));
+
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
+}
+
+void BrowserMainWindow::toolBarDialogClosed(int result)
+{
+    Q_UNUSED(result);
+
+    m_editingToolBars = false;
+
+    foreach (QToolBar *toolbar, findChildren<QToolBar*>()) {
+        toolbar->setMovable(false);
+    }
+
+    foreach (QPointer<QToolBar> toolBar, m_toolBarsToHide)
+        if (toolBar)
+            toolBar->hide();
+    m_toolBarsToHide.clear();
+
+    m_bookmarksToolbar->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    m_autoSaver->changeOccurred();
 }
