@@ -1054,7 +1054,6 @@ void BrowserMainWindow::setupToolBars()
     m_toolbarSearchAction->setObjectName(QLatin1String("search"));
     makeToolBarAction(m_toolbarSearchAction);
 
-    m_tabWidget->lineEditStack()->setMinimumWidth(120);
     m_lineEditsAction = createAction(m_tabWidget->lineEditStack(), this);
     m_lineEditsAction->setObjectName(QLatin1String("location"));
     makeToolBarAction(m_lineEditsAction);
