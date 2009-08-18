@@ -147,9 +147,7 @@ BrowserMainWindow::BrowserMainWindow(QWidget *parent, Qt::WindowFlags flags)
     connect(m_tabWidget, SIGNAL(statusBarVisibilityChangeRequested(bool)),
             statusBar(), SLOT(setVisible(bool)));
     connect(m_tabWidget, SIGNAL(toolBarVisibilityChangeRequested(bool)),
-            m_navigationBar, SLOT(setVisible(bool)));
-    connect(m_tabWidget, SIGNAL(toolBarVisibilityChangeRequested(bool)),
-            m_bookmarksToolbar, SLOT(setVisible(bool)));
+            this, SLOT(setToolBarsVisible(bool)));
     connect(m_tabWidget, SIGNAL(lastTabClosed()),
             this, SLOT(lastTabClosed()));
 
@@ -270,6 +268,8 @@ void BrowserMainWindow::restoreToolBarState(QDataStream &in)
     in >> mainWindowState;
 
     QMainWindow::restoreState(mainWindowState);
+
+    updateToolBarsVisible();
 }
 
 bool BrowserMainWindow::restoreState(const QByteArray &state)
@@ -524,13 +524,12 @@ void BrowserMainWindow::setupMenu()
     connect(m_viewShowMenuBarAction, SIGNAL(triggered()), this, SLOT(viewMenuBar()));
     addAction(m_viewShowMenuBarAction);
 
-    m_viewToolbarAction = new QAction(this);
-    connect(m_viewToolbarAction, SIGNAL(triggered()), this, SLOT(viewToolbar()));
-    m_viewMenu->addAction(m_viewToolbarAction);
+    m_toolBarMenuAction = new QAction(this);
+    m_viewMenu->addAction(m_toolBarMenuAction);
 
-    m_viewBookmarkBarAction = new QAction(m_viewMenu);
-    connect(m_viewBookmarkBarAction, SIGNAL(triggered()), this, SLOT(viewBookmarksBar()));
-    m_viewMenu->addAction(m_viewBookmarkBarAction);
+    m_viewToolBarsAction = new QAction(this);
+    connect(m_viewToolBarsAction, SIGNAL(triggered()), this, SLOT(viewToolBars()));
+    addAction(m_viewToolBarsAction);
 
     QAction *viewTabBarAction = m_tabWidget->tabBar()->viewTabBarAction();
     m_viewMenu->addAction(viewTabBarAction);
@@ -736,8 +735,10 @@ void BrowserMainWindow::setupMenu()
 
 void BrowserMainWindow::aboutToShowViewMenu()
 {
-    m_viewToolbarAction->setText(m_navigationBar->isVisible() ? tr("Hide Toolbar") : tr("Show Toolbar"));
-    m_viewBookmarkBarAction->setText(m_bookmarksToolbar->isVisible() ? tr("Hide Bookmarks Bar") : tr("Show Bookmarks Bar"));
+    QMenu *oldMenu = m_toolBarMenuAction->menu();
+    m_toolBarMenuAction->setMenu(createPopupMenu());
+    delete oldMenu;
+
     m_viewStatusbarAction->setText(statusBar()->isVisible() ? tr("Hide Status Bar") : tr("Show Status Bar"));
 }
 
@@ -819,8 +820,8 @@ void BrowserMainWindow::retranslate()
     m_editPreferencesAction->setShortcut(tr("Ctrl+,"));
 
     m_viewMenu->setTitle(tr("&View"));
-    m_viewToolbarAction->setShortcut(tr("Ctrl+|"));
-    m_viewBookmarkBarAction->setShortcut(tr("Alt+Ctrl+B"));
+    m_viewToolBarsAction->setShortcut(tr("Ctrl+|"));
+    m_toolBarMenuAction->setText(tr("Toolbars"));
     m_viewStatusbarAction->setShortcut(tr("Ctrl+/"));
     m_viewShowMenuBarAction->setText(tr("Show Menu Bar"));
     m_viewReloadAction->setText(tr("&Reload Page"));
@@ -868,8 +869,17 @@ void BrowserMainWindow::retranslate()
     updateStopReloadActionText(false);
 }
 
+void BrowserMainWindow::addToolBar(QToolBar *toolBar)
+{
+    connect(toolBar->toggleViewAction(), SIGNAL(triggered(bool)),
+            this, SLOT(toolBarViewActionTriggered(bool)));
+    QMainWindow::addToolBar(toolBar);
+}
+
 void BrowserMainWindow::setupToolBars()
 {
+    m_toolBarsVisible = false;
+
     // As of Qt 4.6, unified toolbars have too many limitations to use easily
     //setUnifiedTitleAndToolBarOnMac(true);
 
@@ -968,26 +978,6 @@ void BrowserMainWindow::viewMenuBar()
     menuBar()->setVisible(!menuBar()->isVisible());
 
     m_menuBarVisible = menuBar()->isVisible();
-    m_autoSaver->changeOccurred();
-}
-
-void BrowserMainWindow::viewToolbar()
-{
-    if (m_navigationBar->isVisible()) {
-        m_navigationBar->close();
-    } else {
-        m_navigationBar->show();
-    }
-    m_autoSaver->changeOccurred();
-}
-
-void BrowserMainWindow::viewBookmarksBar()
-{
-    if (m_bookmarksToolbar->isVisible()) {
-        m_bookmarksToolbar->hide();
-    } else {
-        m_bookmarksToolbar->show();
-    }
     m_autoSaver->changeOccurred();
 }
 
@@ -1472,3 +1462,82 @@ void BrowserMainWindow::geometryChangeRequested(const QRect &geometry)
     setGeometry(geometry);
 }
 
+QMenu *BrowserMainWindow::createPopupMenu()
+{
+    QMenu *menu = QMainWindow::createPopupMenu();
+    if (!menu)
+        menu = new QMenu(this);
+
+    m_viewToolBarsAction->setText(m_toolBarsVisible ? tr("Hide Toolbars") : tr("Show Toolbars"));
+    QAction *first = menu->isEmpty() ? 0 : menu->actions().first();
+    first = menu->insertSeparator(first);
+    menu->insertAction(first, m_viewToolBarsAction);
+
+    return menu;
+}
+
+void BrowserMainWindow::viewToolBars()
+{
+    setToolBarsVisible(!m_toolBarsVisible);
+}
+
+void BrowserMainWindow::setToolBarsVisible(bool visible)
+{
+    if (visible == m_toolBarsVisible)
+        return;
+
+    if (visible) {
+        bool anyShown = false;
+        foreach (QToolBar *toolBar, findChildren<QToolBar*>()) {
+            // only reshow toolbars that were not hidden explicitly
+            if (!toolBar->property("bulk_hidden").toBool())
+                continue;
+            anyShown = true;
+            toolBar->show();
+        }
+
+        // show all the toolbars if all were hidden explicitly
+        if (!anyShown)
+            foreach (QToolBar *toolBar, findChildren<QToolBar*>())
+                toolBar->show();
+    } else {
+        foreach (QToolBar *toolBar, findChildren<QToolBar*>()) {
+            if (!toolBar->isHidden()) {
+                toolBar->setProperty("bulk_hidden", true);
+                toolBar->hide();
+            }
+        }
+    }
+
+    m_toolBarsVisible = visible;
+}
+
+void BrowserMainWindow::toolBarViewActionTriggered(bool visible)
+{
+    if (!visible)
+        sender()->parent()->setProperty("bulk_hidden", QVariant());
+    updateToolBarsVisible();
+    m_autoSaver->changeOccurred();
+}
+
+void BrowserMainWindow::updateToolBarsVisible()
+{
+    m_toolBarsVisible = false;
+    foreach (QToolBar *toolBar, findChildren<QToolBar*>()) {
+        if (!toolBar->isHidden()) {
+            m_toolBarsVisible = true;
+            return;
+        }
+    }
+}
+
+bool BrowserMainWindow::event(QEvent *event)
+{
+    // Qt's implementation doesn't actually hide the toolbars; it moves them
+    // offscreen. We'll use our own so our menu actions are updated correctly.
+    if (event->type() == QEvent::ToolBarChange) {
+        viewToolBars();
+        return true;
+    }
+    return QMainWindow::event(event);
+}

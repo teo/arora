@@ -107,6 +107,9 @@ public:
     void restoreToolBarState(QDataStream &);
     bool restoreState(const QByteArray &state);
 
+    QMenu *createPopupMenu();
+    void addToolBar(QToolBar *);
+
 public slots:
     void goHome();
     void privacyChanged(bool isPrivate);
@@ -116,6 +119,7 @@ protected:
     void closeEvent(QCloseEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void changeEvent(QEvent *event);
+    bool event(QEvent *event);
 
 private slots:
     void save();
@@ -144,12 +148,13 @@ private slots:
     void zoomNormal();
     void zoomOut();
     void viewMenuBar();
-    void viewToolbar();
-    void viewBookmarksBar();
+    void viewToolBars();
     void viewStatusbar();
     void viewPageSource();
     void viewFullScreen(bool enable);
     void viewTextEncoding(QAction *action);
+    void setToolBarsVisible(bool);
+    void toolBarViewActionTriggered(bool checked);
 
     void webSearch();
     void clearPrivateData();
@@ -178,6 +183,7 @@ private:
     void setupToolBars();
     void showAndFocus(QWidget *);
     void updateStopReloadActionText(bool loading);
+    void updateToolBarsVisible();
 
 private:
     QMenu *m_fileMenu;
@@ -206,9 +212,9 @@ private:
     QAction *m_editPreferencesAction;
 
     QMenu *m_viewMenu;
+    QAction *m_toolBarMenuAction;
     QAction *m_viewShowMenuBarAction;
-    QAction *m_viewToolbarAction;
-    QAction *m_viewBookmarkBarAction;
+    QAction *m_viewToolBarsAction;
     QAction *m_viewStatusbarAction;
     QAction *m_viewStopAction;
     QAction *m_viewReloadAction;
@@ -254,6 +260,7 @@ private:
     QSplitter *m_navigationSplitter;
     ToolbarSearch *m_toolbarSearch;
     BookmarksToolBar *m_bookmarksToolbar;
+    bool m_toolBarsVisible;
 
     TabWidget *m_tabWidget;
 
