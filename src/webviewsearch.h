@@ -55,8 +55,14 @@ class WebViewWithSearch : public QWidget
 
 public:
     WebViewWithSearch(WebView *webView, QWidget *parent = 0);
+
+    void addWidget(QWidget *widget);
+
     WebView *m_webView;
     WebViewSearch *m_webViewSearch;
+
+private:
+    QVBoxLayout *m_layout;
 };
 
 

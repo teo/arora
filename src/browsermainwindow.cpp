@@ -114,6 +114,7 @@ BrowserMainWindow::BrowserMainWindow(QWidget *parent, Qt::WindowFlags flags)
     , m_navigationSplitter(0)
     , m_toolbarSearch(0)
     , m_bookmarksToolbar(0)
+    , m_contextMenuToolBar(0)
     , m_tabWidget(new TabWidget(this))
     , m_autoSaver(new AutoSaver(this))
 {
@@ -151,6 +152,8 @@ BrowserMainWindow::BrowserMainWindow(QWidget *parent, Qt::WindowFlags flags)
             this, SLOT(setToolBarsVisible(bool)));
     connect(m_tabWidget, SIGNAL(lastTabClosed()),
             this, SLOT(lastTabClosed()));
+    connect(m_tabWidget, SIGNAL(currentChanged(int)),
+            this, SLOT(insertToolBarsBelowTabBar(int)));
 
     updateWindowTitle();
     loadDefaultState();
@@ -226,6 +229,10 @@ void BrowserMainWindow::save()
 void BrowserMainWindow::saveToolBarState(QDataStream &out) const
 {
     out << QMainWindow::saveState();
+
+    out << m_toolBarsBelowTabBar.size();
+    foreach (QToolBar* toolBar, m_toolBarsBelowTabBar)
+        out << toolBar->objectName() << !toolBar->isHidden();
 }
 
 static const qint32 BrowserMainWindowMagic = 0xba;
@@ -269,6 +276,24 @@ void BrowserMainWindow::restoreToolBarState(QDataStream &in)
     in >> mainWindowState;
 
     QMainWindow::restoreState(mainWindowState);
+
+    QList<QToolBar*> toolBars = findChildren<QToolBar*>();
+    int count;
+    in >> count;
+    while (--count >= 0) {
+        QString toolBarName;
+        bool visible;
+        in >> toolBarName;
+        in >> visible;
+        foreach (QToolBar *toolBar, toolBars) {
+            if (toolBar->objectName() == toolBarName) {
+                m_toolBarsBelowTabBar << toolBar;
+                toolBar->setVisible(visible);
+                break;
+            }
+        }
+    }
+    insertToolBarsBelowTabBar(m_tabWidget->currentIndex());
 
     updateToolBarsVisible();
 }
@@ -872,6 +897,7 @@ void BrowserMainWindow::retranslate()
     m_bookmarksToolbar->setWindowTitle(tr("&Bookmarks"));
     m_stopReloadAction->setText(tr("Reload / Stop"));
     updateStopReloadActionText(false);
+    m_showBelowTabBarAction->setText(tr("Show below tab bar"));
 }
 
 void BrowserMainWindow::addToolBar(QToolBar *toolBar)
@@ -879,6 +905,8 @@ void BrowserMainWindow::addToolBar(QToolBar *toolBar)
     toolBar->setMovable(m_editingToolBars);
     connect(toolBar->toggleViewAction(), SIGNAL(triggered(bool)),
             this, SLOT(toolBarViewActionTriggered(bool)));
+    connect(toolBar, SIGNAL(destroyed(QObject *)),
+            this, SLOT(toolBarDestroyed(QObject *)));
     QMainWindow::addToolBar(toolBar);
 }
 
@@ -943,6 +971,11 @@ void BrowserMainWindow::setupToolBars()
 
     addToolBarBreak();
     addToolBar(m_bookmarksToolbar);
+
+    m_showBelowTabBarAction = new QAction(this);
+    m_showBelowTabBarAction->setCheckable(true);
+    connect(m_showBelowTabBarAction, SIGNAL(triggered(bool)),
+            this, SLOT(setShowBelowTabBar(bool)));
 }
 
 void BrowserMainWindow::showBookmarksDialog()
@@ -1475,12 +1508,23 @@ QMenu *BrowserMainWindow::createPopupMenu()
     if (!menu)
         menu = new QMenu(this);
 
+    foreach (QToolBar *toolBar, m_toolBarsBelowTabBar)
+        menu->addAction(toolBar->toggleViewAction());
+
     m_viewToolBarsAction->setText(m_toolBarsVisible ? tr("Hide Toolbars") : tr("Show Toolbars"));
     QAction *first = menu->isEmpty() ? 0 : menu->actions().first();
     first = menu->insertSeparator(first);
     menu->insertAction(first, m_viewToolBarsAction);
 
-    if (!m_editingToolBars) {
+    if (m_editingToolBars) {
+        if (m_contextMenuToolBar) {
+            menu->addSeparator();
+
+            m_showBelowTabBarAction->setChecked(m_contextMenuToolBar->parentWidget() != this);
+            m_showBelowTabBarAction->setData(quintptr(m_contextMenuToolBar));
+            menu->addAction(m_showBelowTabBarAction);
+        }
+    } else {
         menu->addSeparator();
         menu->addAction(m_viewEditToolBarsAction);
     }
@@ -1601,4 +1645,58 @@ void BrowserMainWindow::toolBarDialogClosed(int result)
     m_bookmarksToolbar->setContextMenuPolicy(Qt::CustomContextMenu);
 
     m_autoSaver->changeOccurred();
+}
+
+void BrowserMainWindow::insertToolBarsBelowTabBar(int index)
+{
+    WebViewWithSearch *webViewSearch = qobject_cast<WebViewWithSearch*>(m_tabWidget->widget(index));
+    if (!webViewSearch)
+        return;
+
+    foreach (QToolBar *widget, m_toolBarsBelowTabBar)
+        webViewSearch->addWidget(widget);
+}
+
+void BrowserMainWindow::setShowBelowTabBar(bool below)
+{
+    if (QAction *action = qobject_cast<QAction*>(sender())) {
+        QVariant v = action->data();
+        if (v.canConvert<quintptr>()) {
+            QToolBar *toolBar = reinterpret_cast<QToolBar*>(qvariant_cast<quintptr>(v));
+            if (below) {
+                m_toolBarsBelowTabBar << toolBar;
+                toolBar->setOrientation(Qt::Horizontal);
+                if (WebViewWithSearch *w = qobject_cast<WebViewWithSearch*>(m_tabWidget->currentWebView()->parent()))
+                    w->addWidget(toolBar);
+            } else {
+                m_toolBarsBelowTabBar.removeOne(toolBar);
+                addToolBarBreak();
+                addToolBar(toolBar);
+            }
+        }
+    }
+}
+
+void BrowserMainWindow::contextMenuEvent(QContextMenuEvent *event)
+{
+    QWidget *child = childAt(event->pos());
+    for (; child && child != this; child = child->parentWidget()) {
+        if (QToolBar *toolBar = qobject_cast<QToolBar*>(child)) {
+            m_contextMenuToolBar = toolBar;
+            if (QMenu *menu = createPopupMenu()) {
+                menu->exec(event->globalPos());
+                delete menu;
+            }
+            m_contextMenuToolBar = 0;
+            return;
+        }
+    }
+
+    QMainWindow::contextMenuEvent(event);
+}
+
+void BrowserMainWindow::toolBarDestroyed(QObject *object)
+{
+    if (QToolBar *toolBar = reinterpret_cast<QToolBar*>(object))
+        m_toolBarsBelowTabBar.removeOne(toolBar);
 }

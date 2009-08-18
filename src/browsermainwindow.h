@@ -120,6 +120,7 @@ protected:
     void closeEvent(QCloseEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void changeEvent(QEvent *event);
+    void contextMenuEvent(QContextMenuEvent *event);
     bool event(QEvent *event);
 
 private slots:
@@ -179,6 +180,10 @@ private slots:
 
     void editToolBars();
     void toolBarDialogClosed(int result);
+
+    void setShowBelowTabBar(bool);
+    void insertToolBarsBelowTabBar(int index);
+    void toolBarDestroyed(QObject *);
 
 private:
     void retranslate();
@@ -268,6 +273,9 @@ private:
     bool m_toolBarsVisible;
     bool m_editingToolBars;
     QList<QPointer<QToolBar> > m_toolBarsToHide;
+    QAction *m_showBelowTabBarAction;
+    QList<QToolBar*> m_toolBarsBelowTabBar;
+    QToolBar *m_contextMenuToolBar;
 
     TabWidget *m_tabWidget;
 
