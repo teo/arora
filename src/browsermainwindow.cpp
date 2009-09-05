@@ -905,6 +905,7 @@ void BrowserMainWindow::retranslate()
 
     // Toolbar
     m_navigationBar->setWindowTitle(tr("Navigation"));
+    m_bookmarksToolbar->setWindowTitle(tr("&Bookmarks"));
     m_stopReloadAction->setText(tr("Reload / Stop"));
     updateStopReloadActionText(false);
 }
