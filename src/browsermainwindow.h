@@ -64,17 +64,16 @@
 #define BROWSERMAINWINDOW_H
 
 #include <qmainwindow.h>
+#include <qhash.h>
 #include <qicon.h>
 #include <qurl.h>
 
 class AutoSaver;
 class BookmarksToolBar;
-class ChaseWidget;
 class QWebFrame;
 class TabWidget;
 class ToolbarSearch;
 class WebView;
-class QSplitter;
 class QFrame;
 class HistoryMenu;
 class BookmarksMenuBarMenu;
@@ -105,7 +104,7 @@ public:
 
     void saveToolBarState(QDataStream &) const;
     QByteArray saveState(bool withTabs = true) const;
-    void restoreToolBarState(QDataStream &);
+    void restoreToolBarState(QDataStream &, int version = 0);
     bool restoreState(const QByteArray &state);
 
     QMenu *createPopupMenu();
@@ -115,6 +114,10 @@ public slots:
     void goHome();
     void privacyChanged(bool isPrivate);
     void zoomTextOnlyChanged(bool textOnly);
+    QToolBar *addToolBar(const QString &name, const QString &objectName = QString());
+
+    void setToolButtonStyle(Qt::ToolButtonStyle);
+    void setIconSize(const QSize &);
 
 protected:
     void closeEvent(QCloseEvent *event);
@@ -184,6 +187,7 @@ private slots:
     void setShowBelowTabBar(bool);
     void insertToolBarsBelowTabBar(int index);
     void toolBarDestroyed(QObject *);
+    void restoreDefaultToolBars();
 
 private:
     void retranslate();
@@ -193,6 +197,7 @@ private:
     void showAndFocus(QWidget *);
     void updateStopReloadActionText(bool loading);
     void updateToolBarsVisible();
+    void makeToolBarAction(QAction *action);
 
 private:
     QMenu *m_fileMenu;
@@ -261,13 +266,13 @@ private:
     QAction *m_helpAboutApplicationAction;
 
     // Toolbar
-    QToolBar *m_navigationBar;
     QMenu *m_historyBackMenu;
     QMenu *m_historyForwardMenu;
+    QAction *m_toolbarSearchAction;
+    QAction *m_lineEditsAction;
     QAction *m_stopReloadAction;
     QIcon m_reloadIcon;
     QIcon m_stopIcon;
-    QSplitter *m_navigationSplitter;
     ToolbarSearch *m_toolbarSearch;
     BookmarksToolBar *m_bookmarksToolbar;
     bool m_toolBarsVisible;
@@ -276,6 +281,8 @@ private:
     QAction *m_showBelowTabBarAction;
     QList<QToolBar*> m_toolBarsBelowTabBar;
     QToolBar *m_contextMenuToolBar;
+    QHash<QString, QAction*> m_toolBarActions;
+    QByteArray m_savedState;
 
     TabWidget *m_tabWidget;
 
