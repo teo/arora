@@ -78,7 +78,9 @@ void EditToolBar::actionEvent(QActionEvent *event)
         if (m_editable)
             if (QWidget *widget = widgetForAction(event->action()))
                 widget->setAttribute(Qt::WA_TransparentForMouseEvents);
-        if (event->action()->objectName() == QLatin1String("mainMenu"))
+        if (event->action()->objectName() == QLatin1String("mainMenu") ||
+            event->action()->objectName() == QLatin1String("toolsToolMenu") ||
+            event->action()->objectName() == QLatin1String("bookmarksToolMenu"))
             if (QToolButton *button = qobject_cast<QToolButton*>(widgetForAction(event->action())))
                 button->setPopupMode(QToolButton::InstantPopup);
     }

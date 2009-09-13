@@ -273,6 +273,10 @@ private:
     QAction *m_stopReloadAction;
     QAction *m_mainMenuAction;
     QMenu *m_mainMenu;
+    QAction *m_toolsToolMenuAction;
+    QMenu *m_toolsToolMenu;
+    QAction *m_bookmarksToolMenuAction;
+    QMenu *m_bookmarksToolMenu;
     QIcon m_reloadIcon;
     QIcon m_stopIcon;
     ToolbarSearch *m_toolbarSearch;

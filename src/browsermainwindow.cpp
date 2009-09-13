@@ -967,6 +967,8 @@ void BrowserMainWindow::retranslate()
     m_bookmarksToolbar->setWindowTitle(tr("&Bookmarks"));
     m_stopReloadAction->setText(tr("Reload / Stop"));
     m_mainMenuAction->setText(tr("Menu"));
+    m_toolsToolMenuAction->setText(tr("&Tools"));
+    m_bookmarksToolMenuAction->setText(tr("&Bookmarks"));
     updateStopReloadActionText(false);
     m_showBelowTabBarAction->setText(tr("Show below tab bar"));
 
@@ -1054,6 +1056,37 @@ void BrowserMainWindow::setupToolBars()
     m_mainMenuAction->setMenu(m_mainMenu);
     m_mainMenuAction->setObjectName(QLatin1String("mainMenu"));
     makeToolBarAction(m_mainMenuAction);
+
+    m_toolsToolMenu = new QMenu(this);
+    m_toolsToolMenu->addAction(m_viewSourceAction);
+    m_toolsToolMenu->addAction(m_filePrintPreviewAction);
+    m_toolsToolMenu->addAction(m_filePrintAction);
+    m_toolsToolMenu->addSeparator();
+    m_toolsToolMenu->addMenu(m_historyMenu);
+    m_toolsToolMenu->addAction(m_toolsClearPrivateDataAction);
+    m_toolsToolMenu->addAction(tr("Downloads"), this, SLOT(downloadManager()), QKeySequence(tr("Ctrl+Y", "Download Manager")));
+    m_toolsToolMenu->addAction(m_toolsEnableInspector);
+    m_toolsToolMenu->addAction(m_filePrivateBrowsingAction);
+    m_toolsToolMenu->addSeparator();
+    m_toolsToolMenu->addAction(m_editPreferencesAction);
+    m_toolsToolMenu->addSeparator();
+    m_toolsToolMenu->addAction(m_helpAboutApplicationAction);
+
+    m_toolsToolMenu->setTitle(tr("&Tools"));
+    m_toolsToolMenuAction = new QAction(this);
+    m_toolsToolMenuAction->setMenu(m_toolsToolMenu);
+    m_toolsToolMenuAction->setObjectName(QLatin1String("toolsToolMenu"));
+    makeToolBarAction(m_toolsToolMenuAction);
+
+    m_bookmarksToolMenu = new QMenu(this);
+    m_bookmarksToolMenu->addActions(m_bookmarksMenu->actions());
+    m_bookmarksToolMenu->setTitle(tr("&Bookmarks"));
+    m_bookmarksToolMenuAction = new QAction(this);
+    m_bookmarksToolMenuAction->setMenu(m_bookmarksToolMenu);
+    m_bookmarksToolMenuAction->setObjectName(QLatin1String("bookmarksToolMenu"));
+    makeToolBarAction(m_bookmarksToolMenuAction);
+
+    makeToolBarAction(m_editFindAction);
 
     m_toolbarSearch = new ToolbarSearch(this);
     connect(m_toolbarSearch, SIGNAL(search(const QUrl&)),
