@@ -965,6 +965,7 @@ void BrowserMainWindow::retranslate()
     // Toolbar
     m_bookmarksToolbar->setWindowTitle(tr("&Bookmarks"));
     m_stopReloadAction->setText(tr("Reload / Stop"));
+    m_mainMenuAction->setText(tr("Menu"));
     updateStopReloadActionText(false);
     m_showBelowTabBarAction->setText(tr("Show below tab bar"));
 
@@ -1046,6 +1047,12 @@ void BrowserMainWindow::setupToolBars()
     m_stopReloadAction->setIcon(m_reloadIcon);
     m_stopReloadAction->setObjectName(QLatin1String("stopReload"));
     makeToolBarAction(m_stopReloadAction);
+
+    m_mainMenuAction = new QAction(this);
+    connect(m_mainMenuAction, SIGNAL(triggered()),
+            this, SLOT(showMainMenu()));
+    m_mainMenuAction->setObjectName(QLatin1String("mainMenu"));
+    makeToolBarAction(m_mainMenuAction);
 
     m_toolbarSearch = new ToolbarSearch(this);
     connect(m_toolbarSearch, SIGNAL(search(const QUrl&)),
@@ -1619,6 +1626,11 @@ void BrowserMainWindow::showWindow()
             windows.at(offset)->currentTab()->setFocus();
         }
     }
+}
+
+void BrowserMainWindow::showMainMenu()
+{
+    QMenu::exec(menuBar()->actions(), QCursor::pos());
 }
 
 void BrowserMainWindow::openActionUrl(QAction *action)
