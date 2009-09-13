@@ -33,6 +33,7 @@
 #include <qapplication.h>
 #include <qevent.h>
 #include <qlayout.h>
+#include <qtoolbutton.h>
 #include <qwidgetaction.h>
 
 #ifdef Q_OS_MAC
@@ -73,9 +74,14 @@ void EditToolBar::setEditable(bool editable)
 void EditToolBar::actionEvent(QActionEvent *event)
 {
     QToolBar::actionEvent(event);
-    if (m_editable && event->type() == QEvent::ActionAdded)
-        if (QWidget *widget = widgetForAction(event->action()))
-            widget->setAttribute(Qt::WA_TransparentForMouseEvents);
+    if (event->type() == QEvent::ActionAdded) {
+        if (m_editable)
+            if (QWidget *widget = widgetForAction(event->action()))
+                widget->setAttribute(Qt::WA_TransparentForMouseEvents);
+        if (event->action()->objectName() == QLatin1String("mainMenu"))
+            if (QToolButton *button = qobject_cast<QToolButton*>(widgetForAction(event->action())))
+                button->setPopupMode(QToolButton::InstantPopup);
+    }
 }
 
 void EditToolBar::removeCurrentSpacer()

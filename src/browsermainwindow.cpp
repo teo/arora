@@ -165,6 +165,7 @@ BrowserMainWindow::BrowserMainWindow(QWidget *parent, Qt::WindowFlags flags)
         if (action->menu())
             actions += action->menu()->actions();
         addAction(action);
+        m_mainMenu->addAction(action);
     }
 #if defined(Q_WS_MAC)
     setWindowIcon(QIcon());
@@ -1048,9 +1049,9 @@ void BrowserMainWindow::setupToolBars()
     m_stopReloadAction->setObjectName(QLatin1String("stopReload"));
     makeToolBarAction(m_stopReloadAction);
 
+    m_mainMenu = new QMenu(this);
     m_mainMenuAction = new QAction(this);
-    connect(m_mainMenuAction, SIGNAL(triggered()),
-            this, SLOT(showMainMenu()));
+    m_mainMenuAction->setMenu(m_mainMenu);
     m_mainMenuAction->setObjectName(QLatin1String("mainMenu"));
     makeToolBarAction(m_mainMenuAction);
 
@@ -1626,11 +1627,6 @@ void BrowserMainWindow::showWindow()
             windows.at(offset)->currentTab()->setFocus();
         }
     }
-}
-
-void BrowserMainWindow::showMainMenu()
-{
-    QMenu::exec(menuBar()->actions(), QCursor::pos());
 }
 
 void BrowserMainWindow::openActionUrl(QAction *action)

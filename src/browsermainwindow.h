@@ -174,7 +174,6 @@ private slots:
     void aboutToShowWindowMenu();
     void aboutToShowTextEncodingMenu();
     void openActionUrl(QAction *action);
-    void showMainMenu();
     void showWindow();
     void swapFocus();
     void onFocusChange(QWidget *, QWidget *);
@@ -273,6 +272,7 @@ private:
     QAction *m_lineEditsAction;
     QAction *m_stopReloadAction;
     QAction *m_mainMenuAction;
+    QMenu *m_mainMenu;
     QIcon m_reloadIcon;
     QIcon m_stopIcon;
     ToolbarSearch *m_toolbarSearch;
